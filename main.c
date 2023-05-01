@@ -98,6 +98,8 @@ int checkParanthese(char *input);
 void operation_helper(int* lhs, char* operation, int rhs);
 int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name);
 
+FILE *fout;
+
 int main()
 {
     // Create a list to store variables
@@ -108,9 +110,13 @@ int main()
     int line_count = 0;
     int i = 0;
 
+    fout = fopen("../output.txt", "w");
+    fprintf(fout, "; ModuleID = 'advcalc2ir'\ndeclare i32 @printf(i8*, ...)\n@print.str = constant [4 x i8] c\"%%d\\0A\\00\" \n\ndefine i32 @main() {\n");
+    int error_flag = 0;
+
     file_ptr = fopen("../input.txt", "r");  // open the file for reading
     if (file_ptr == NULL) {  // if the file cannot be opened, print an error message and exit
-        printf("Error opening file!\n");
+        fprintf(fout, "Error opening file!\n");
         return -1;
     }
 
@@ -128,7 +134,7 @@ int main()
     }
 
     fclose(file_ptr);
-    while (i < line_count)
+    for (i = 0; i < line_count; i++)
     {
         //setbuf(stdout, 0);
         //printf("> ");
@@ -139,7 +145,8 @@ int main()
         // Check if there are any unknown characters
         if (checkUnknown(input) == -1)
         {
-            printf("Error!\n");
+            printf( "Error in line %lld!\n", i+1);
+            error_flag = 1;
             continue;
         }
 
@@ -153,13 +160,15 @@ int main()
 
         if (check_paran == -1) // there is a mismatch in the number of left and right parentheses
         {
-            printf("Error!\n");
+            printf("Error in line %lld!\n", i+1);
+            error_flag = 1;
             continue;
         }
 
         else if (equal_type == -1) // more than one equals sign or the equal sign is somewhere other than the second place
         {
-            printf("Error!\n");
+            printf("Error in line %lld!\n", i+1);
+            error_flag = 1;
         }
         else if (equal_type == 1) // there is an equals sign, so it is an assignment
         {
@@ -175,7 +184,8 @@ int main()
             char *result_string2 = calloc(1, 256);
             if (strcmp(string_result, "Error!") == 0)
             {
-                printf("Error!\n");
+                printf("Error in line %lld!\n", i+1);
+                error_flag = 1;
                 continue;
             }
             else if (string_result[0] == '%') // If pointer
@@ -189,14 +199,14 @@ int main()
                 result = atoll(string_result);
             }
             list_add(list, token->value, result); // add the variable to the list
-            printf("%%%s = alloca i32\n", token->value);
+            fprintf(fout, "%%%s = alloca i32\n", token->value);
             if (is_pointer == 1)
             {
-                printf("store i32 %s, i32* %%%s\n", pointer_name, token->value);
+                fprintf(fout, "store i32 %s, i32* %%%s\n", pointer_name, token->value);
             }
             else
             {
-                printf("store i32 %lld, i32* %%%s\n", result, token->value);
+                fprintf(fout, "store i32 %lld, i32* %%%s\n", result, token->value);
             }
         }
         else // it is an expression
@@ -205,17 +215,30 @@ int main()
             char *result = calloc(1, 256);
             result = parse(input, list);
 
-            if (result[0] == '%')
+            if (strcmp(result, "Error!") == 0)
             {
-                printf("%lld\n", list_get(list, result));
+                printf("Error in line %lld!\n", i+1);
+                error_flag = 1;
+                continue;
+            }
+            else if (result[0] == '%')
+            {
+                fprintf(fout, "call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4 x i8]* @print.str, i32 0, i32 0), i32 %s)\n", result);
             }
             else
             {
-                printf("%s\n", parse(input, list));
+                fprintf(fout, "%s\n", parse(input, list));
             }
         }
-        i++;
     }
+
+    fprintf(fout, "ret i32 0\n}\n");
+
+    if (error_flag == 1) {
+        freopen("../output.txt", "w", fout);
+    }
+
+    fclose(fout);
 
     return 0;
 }
@@ -242,7 +265,7 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
     {
         if (*is_pointer == 1)
         {
-            printf("%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
+            fprintf(fout, "%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
             operation_helper(result, operation, list_get(list, string_result));
             //*result += atoll(string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -251,7 +274,7 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
         }
         else
         {
-            printf("%%%lld = %s i32 %lld, %s\n", *global_counter, operation, *result, string_result);
+            fprintf(fout, "%%%lld = %s i32 %lld, %s\n", *global_counter, operation, *result, string_result);
             operation_helper(result, operation, list_get(list, string_result));
             //*result += list_get(list, string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -263,7 +286,7 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
     {
         if (*is_pointer == 1)
         {
-            printf("%%%lld = add i32 %s, %lld\n", *global_counter, pointer_name, atoll(string_result));
+            fprintf(fout, "%%%lld = %s i32 %s, %lld\n", *global_counter, operation, pointer_name, atoll(string_result));
             operation_helper(result, operation, atoll(string_result));
             //*result += atoll(string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -272,7 +295,7 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
         }
         else
         {
-            printf("%%%lld = add i32 %lld, %lld\n", *global_counter, *result, atoll(string_result));
+            fprintf(fout, "%%%lld = %s i32 %lld, %lld\n", *global_counter, operation, *result, atoll(string_result));
             operation_helper(result, operation, atoll(string_result));
             //*result += list_get(list, string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -683,6 +706,7 @@ char *parse_factor(Lexer *lexer, List *list)
 
 char *parse_primary(Lexer *lexer, List *list)
 {
+    char* pointer_final = calloc(256, sizeof(char));
     int result = 0;
     char *string_result = calloc(1, 256);
     Token *token = lexer_peek(lexer);
@@ -690,7 +714,7 @@ char *parse_primary(Lexer *lexer, List *list)
     if (token->type == TOKEN_IDENTIFIER) // If the token is an identifier, get the value from the list
     {
         // result = list_get(list, token->value);
-        printf("%%%lld = load i32, i32* %%%s\n", global_counter, token->value);
+        fprintf(fout, "%%%lld = load i32, i32* %%%s\n", global_counter, token->value);
         char *result_string2 = calloc(1, 256);
         sprintf(result_string2, "%%%lld", global_counter);
         list_add(list, result_string2, list_get(list, token->value));
@@ -736,7 +760,17 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
-            result = ~atoll(string_result);
+            if (string_result[0] == '%') {
+                fprintf(fout, "%%%lld = xor i32 %s, -1\n", global_counter, string_result);
+                result = ~list_get(list, string_result);
+            }
+            else {
+                fprintf(fout, "%%%lld = xor i32 %s, -1\n", global_counter, string_result);
+                result = ~atoll(string_result);
+            }
+            sprintf(pointer_final, "%%%lld", global_counter);
+            list_add(list, pointer_final, result);
+            global_counter++;
         }
         token = lexer_advance(lexer);
         if (token->type != TOKEN_RPAREN)
@@ -806,58 +840,94 @@ char *parse_primary(Lexer *lexer, List *list)
         // Do the operation based on the function
         if (ttype == TOKEN_XOR)
         {
-            char* pointer_final = calloc(256, sizeof(char));
-            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
+            fprintf(fout, "%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
             sprintf(pointer_final, "%%%lld", global_counter);
 
             result = result2 ^ result3;
             list_add(list, pointer_final, result);
             global_counter++;
-            return pointer_final;
         }
         else if (ttype == TOKEN_RR)
         {
-            char* pointer_final = calloc(256, sizeof(char));
-            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
-            sprintf(pointer_final, "%%%lld", global_counter);
+            // a b right shift or a leftshit 64-b
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, lhs);
+            int lhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, rhs);
+            int rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = ashr i32 %%%lld, %%%lld\n", global_counter, lhs_pos, rhs_pos);
+            int fin_lhs_pos = global_counter;
+            global_counter++;
 
-            result = result2 >> result3;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, lhs);
+            lhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, rhs);
+            rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = sub i32 32, %%%lld\n", global_counter, rhs_pos);
+            rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = shl i32 %%%lld, %%%lld\n", global_counter, lhs_pos, rhs_pos);
+            int fin_rhs_pos = global_counter;
+            global_counter++;
+
+            result = (result2 >> result3) | (result2 << (32 - result3));
+            fprintf(fout, "%%%lld = or i32 %%%lld, %%%lld\n", global_counter, fin_lhs_pos, fin_rhs_pos);
+            sprintf(pointer_final, "%%%lld", global_counter);
             list_add(list, pointer_final, result);
             global_counter++;
-            return pointer_final;
         }
         else if (ttype == TOKEN_RS)
         {
-            char* pointer_final = calloc(256, sizeof(char));
-            printf("%%%lld = ashr i32 %s, %s\n", global_counter, lhs, rhs);
+            fprintf(fout, "%%%lld = ashr i32 %s, %s\n", global_counter, lhs, rhs);
             sprintf(pointer_final, "%%%lld", global_counter);
 
             result = result2 >> result3;
             list_add(list, pointer_final, result);
             global_counter++;
-            return pointer_final;
         }
         else if (ttype == TOKEN_LR)
         {
-            char* pointer_final = calloc(256, sizeof(char));
-            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
-            sprintf(pointer_final, "%%%lld", global_counter);
+            // a b right shift or a leftshit 64-b
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, lhs);
+            int lhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, rhs);
+            int rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = shl i32 %%%lld, %%%lld\n", global_counter, lhs_pos, rhs_pos);
+            int fin_lhs_pos = global_counter;
+            global_counter++;
 
-            result = result2 << result3;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, lhs);
+            lhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = load i32, i32* %s\n", global_counter, rhs);
+            rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = sub i32 32, %%%lld\n", global_counter, rhs_pos);
+            rhs_pos = global_counter;
+            global_counter++;
+            fprintf(fout, "%%%lld = ashr i32 %%%lld, %%%lld\n", global_counter, lhs_pos, rhs_pos);
+            int fin_rhs_pos = global_counter;
+            global_counter++;
+
+            result = (result2 << result3) | (result2 >> (32 - result3));
+            fprintf(fout, "%%%lld = or i32 %%%lld, %%%lld\n", global_counter, fin_lhs_pos, fin_rhs_pos);
+            sprintf(pointer_final, "%%%lld", global_counter);
             list_add(list, pointer_final, result);
             global_counter++;
-            return pointer_final;
         }
         else if (ttype == TOKEN_LS)
         {
-            char* pointer_final = calloc(256, sizeof(char));
-            printf("%%%lld = shl i32 %s, %s\n", global_counter, lhs, rhs);
+            fprintf(fout, "%%%lld = shl i32 %s, %s\n", global_counter, lhs, rhs);
             sprintf(pointer_final, "%%%lld", global_counter);
 
             result = result2 << result3;
             list_add(list, pointer_final, result);
             global_counter++;
-            return pointer_final;
         }
     }
 
@@ -876,6 +946,7 @@ char *parse_primary(Lexer *lexer, List *list)
         return "Error!";
     }
 
+    return pointer_final;
     // change result to string and return it
     char *result_string = calloc(1, 256);
     sprintf(result_string, "%lld", result);
