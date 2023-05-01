@@ -99,6 +99,7 @@ void operation_helper(int* lhs, char* operation, int rhs);
 int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name);
 
 FILE *fout;
+int global_counter = 1;
 
 int main()
 {
@@ -198,8 +199,13 @@ int main()
             {
                 result = atoll(string_result);
             }
-            list_add(list, token->value, result); // add the variable to the list
-            fprintf(fout, "%%%s = alloca i32\n", token->value);
+            if (list_get(list, token->value) != 0) {
+                list_add(list, token->value, result);
+            }
+            else {
+                list_add(list, token->value, result); // add the variable to the list
+                fprintf(fout, "%%%s = alloca i32\n", token->value);
+            }
             if (is_pointer == 1)
             {
                 fprintf(fout, "store i32 %s, i32* %%%s\n", pointer_name, token->value);
@@ -224,10 +230,12 @@ int main()
             else if (result[0] == '%')
             {
                 fprintf(fout, "call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4 x i8]* @print.str, i32 0, i32 0), i32 %s)\n", result);
+                global_counter++;
             }
             else
             {
-                fprintf(fout, "%s\n", parse(input, list));
+                fprintf(fout, "call i32 (i8*, ...) @printf(i8* getelementptr ([4 x i8], [4 x i8]* @print.str, i32 0, i32 0), i32 %s)\n", result);
+                global_counter++;
             }
         }
     }
@@ -251,7 +259,7 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
     if(strcmp(operation, "add") == 0 || strcmp(operation, "sub") == 0) {
         string_result = parse_factor(lexer, list);
     }
-    else if(strcmp(operation, "mul") == 0 || strcmp(operation, "div") == 0 || strcmp(operation, "mod") == 0) {
+    else if(strcmp(operation, "mul") == 0 || strcmp(operation, "sdiv") == 0 || strcmp(operation, "mod") == 0) {
         string_result = parse_primary(lexer, list);
     }
     else if(strcmp(operation, "and") == 0 || strcmp(operation, "or") == 0) {
@@ -265,7 +273,10 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
     {
         if (*is_pointer == 1)
         {
-            fprintf(fout, "%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
+            if (strcmp(pointer_name, "") == 0)
+                fprintf(fout, "%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_final, string_result);
+            else
+                fprintf(fout, "%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
             operation_helper(result, operation, list_get(list, string_result));
             //*result += atoll(string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -286,7 +297,10 @@ int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* 
     {
         if (*is_pointer == 1)
         {
-            fprintf(fout, "%%%lld = %s i32 %s, %lld\n", *global_counter, operation, pointer_name, atoll(string_result));
+            if(strcmp(pointer_name, "") == 0)
+                fprintf(fout, "%%%lld = %s i32 %s, %lld\n", *global_counter, operation, pointer_final, atoll(string_result));
+            else
+                fprintf(fout, "%%%lld = %s i32 %s, %lld\n", *global_counter, operation, pointer_name, atoll(string_result));
             operation_helper(result, operation, atoll(string_result));
             //*result += atoll(string_result);
             sprintf(pointer_final, "%%%lld", *global_counter);
@@ -321,15 +335,13 @@ void operation_helper(int* lhs, char* operation, int rhs) {
     else if(strcmp(operation, "or") == 0) {
         *lhs |= rhs;
     }
-    else if(strcmp(operation, "div") == 0) {
+    else if(strcmp(operation, "sdiv") == 0) {
         *lhs /= rhs;
     }
     else if(strcmp(operation, "mod") == 0) {
         *lhs %= rhs;
     }
 }
-
-int global_counter = 1;
 
 int checkParanthese(char *input)
 {
@@ -669,7 +681,7 @@ char *parse_factor(Lexer *lexer, List *list)
         }
         else if (token->type == TOKEN_DIV)
         {
-            int res = pointer_helper(&is_pointer, "div", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            int res = pointer_helper(&is_pointer, "sdiv", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
             if (res == -1)
             {
                 return "Error!";
@@ -708,18 +720,20 @@ char *parse_primary(Lexer *lexer, List *list)
 {
     char* pointer_final = calloc(256, sizeof(char));
     int result = 0;
+    int is_pointer = 0;
     char *string_result = calloc(1, 256);
     Token *token = lexer_peek(lexer);
     token = lexer_advance(lexer);
     if (token->type == TOKEN_IDENTIFIER) // If the token is an identifier, get the value from the list
     {
+        is_pointer = 1;
         // result = list_get(list, token->value);
         fprintf(fout, "%%%lld = load i32, i32* %%%s\n", global_counter, token->value);
         char *result_string2 = calloc(1, 256);
         sprintf(result_string2, "%%%lld", global_counter);
         list_add(list, result_string2, list_get(list, token->value));
+        sprintf(pointer_final, "%%%lld", global_counter);
         global_counter++;
-        return result_string2;
     }
     else if (token->type == TOKEN_NUMBER) // If the token is a number, get the value from the token
     {
@@ -735,7 +749,8 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else if (string_result[0] == '%')
         {
-            return string_result;
+            is_pointer = 1;
+            sprintf(pointer_final, "%s", string_result);
         }
         else
         {
@@ -760,6 +775,7 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
+            is_pointer = 1;
             if (string_result[0] == '%') {
                 fprintf(fout, "%%%lld = xor i32 %s, -1\n", global_counter, string_result);
                 result = ~list_get(list, string_result);
@@ -780,6 +796,7 @@ char *parse_primary(Lexer *lexer, List *list)
     }
     else if (token->type == TOKEN_XOR || token->type == TOKEN_RR || token->type == TOKEN_RS || token->type == TOKEN_LR || token->type == TOKEN_LS)
     {
+        is_pointer = 1;
         // If the token is a function other than and operator, there will be a left parenthesis, parse the expression, a comma, parse the expression, and then a right parenthesis
         int ttype = token->type;
         token = lexer_advance(lexer);
@@ -946,7 +963,10 @@ char *parse_primary(Lexer *lexer, List *list)
         return "Error!";
     }
 
-    return pointer_final;
+    if (is_pointer == 1) {
+        return pointer_final;
+    }
+
     // change result to string and return it
     char *result_string = calloc(1, 256);
     sprintf(result_string, "%lld", result);

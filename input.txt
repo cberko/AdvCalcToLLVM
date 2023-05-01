@@ -1,3 +1,5 @@
-b = 3
-not(a) fafa sdfas
-a = 3
+siu = 11
+siuuu = 7
+siu / siuuu
+siu = siu * siuuu
+siu - siu + siu * siu / siu
