@@ -736,15 +736,6 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
-            if (string_result[0] == '%') {
-                result = list_get(list, string_result);
-                sprintf(lhs, "%s", string_result);
-                is_lhs_pointer = 1;
-            }
-            else {
-                result = atoll(string_result);
-                sprintf(lhs, "%s", string_result);
-            }
             result = ~atoll(string_result);
         }
         token = lexer_advance(lexer);
