@@ -39,7 +39,9 @@ typedef enum
     TOKEN_ERROR,
     TOKEN_EOF,
     TOKEN_UNKNOWN,
-    TOKEN_EQUALS
+    TOKEN_EQUALS,
+    TOKEN_DIV,
+    TOKEN_MOD
 } TokenType;
 
 // Define the token struct
@@ -94,110 +96,7 @@ int checkValid(Token *token);
 int checkUnknown(char *input);
 int checkParanthese(char *input);
 void operation_helper(int* lhs, char* operation, int rhs);
-int main_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name);
-
-int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name) {
-    if (checkValid(lexer_peek(lexer)) == 0)
-    {
-        return -1;
-    }
-    if(strcmp(operation, "add") == 0 || strcmp(operation, "sub") == 0) {
-        string_result = parse_factor(lexer, list);
-    }
-    else if(strcmp(operation, "mul") == 0) {
-        string_result = parse_primary(lexer, list);
-    }
-    if (strcmp(string_result, "Error!") == 0)
-    {
-        return -1;
-    }
-    else if (string_result[0] == '%')
-    {
-        if (*is_pointer == 1)
-        {
-            printf("%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
-            operation_helper(result, operation, list_get(list, string_result));
-            //*result += atoll(string_result);
-            sprintf(pointer_final, "%%%lld", *global_counter);
-            list_add(list, pointer_final, *result);
-            return 0;
-        }
-        else
-        {
-            printf("%%%lld = %s i32 %lld, %s\n", *global_counter, operation, *result, string_result);
-            operation_helper(result, operation, list_get(list, string_result));
-            //*result += list_get(list, string_result);
-            sprintf(pointer_final, "%%%lld", *global_counter);
-            list_add(list, pointer_final, *result);
-            return 1;
-        }
-    }
-    else
-    {
-        if (*is_pointer == 1)
-        {
-            printf("%%%lld = add i32 %s, %lld\n", *global_counter, pointer_name, atoll(string_result));
-            operation_helper(result, operation, atoll(string_result));
-            //*result += atoll(string_result);
-            sprintf(pointer_final, "%%%lld", *global_counter);
-            list_add(list, pointer_final, *result);
-            return 3;
-        }
-        else
-        {
-            printf("%%%lld = add i32 %lld, %lld\n", *global_counter, *result, atoll(string_result));
-            operation_helper(result, operation, atoll(string_result));
-            //*result += list_get(list, string_result);
-            sprintf(pointer_final, "%%%lld", *global_counter);
-            list_add(list, pointer_final, *result);
-            return 2;
-        }
-    }
-}
-
-void operation_helper(int* lhs, char* operation, int rhs) {
-    if(strcmp(operation, "add") == 0) {
-        *lhs += rhs;
-    }
-    else if(strcmp(operation, "sub") == 0) {
-        *lhs -= rhs;
-    }
-    else if(strcmp(operation, "mul") == 0) {
-        *lhs *= rhs;
-    }
-}
-
-int main_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name)
-{
-    int res = pointer_helper(is_pointer, operation, pointer_final, string_result, result, list, global_counter, lexer, pointer_name);
-    if (res == -1)
-    {
-        return -1;
-    }
-    else if (res == 0)
-    {
-        //printf("%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
-    }
-    else if (res == 1)
-    {
-        //printf("%%%lld = %s i32 %lld, %s\n", *global_counter, operation, *result, string_result);
-    }
-    else if (res == 2)
-    {
-        //printf("%%%lld = %s i32 %lld, %s\n", *global_counter, operation, list_get(list, string_result), pointer_name);
-    }
-    else if (res == 3)
-    {
-        //printf("%%%lld = %s i32 %lld, %lld\n", *global_counter, operation, list_get(list, string_result), *result);
-    }
-    else
-    {
-        return -1;
-    }
-}
-
-
-int global_counter = 1;
+int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name);
 
 int main()
 {
@@ -321,6 +220,94 @@ int main()
     return 0;
 }
 
+int pointer_helper(int *is_pointer, char* operation, char* pointer_final, char* string_result, int *result, List* list, int* global_counter, Lexer* lexer, char* pointer_name) {
+    if (checkValid(lexer_peek(lexer)) == 0)
+    {
+        return -1;
+    }
+    if(strcmp(operation, "add") == 0 || strcmp(operation, "sub") == 0) {
+        string_result = parse_factor(lexer, list);
+    }
+    else if(strcmp(operation, "mul") == 0 || strcmp(operation, "div") == 0 || strcmp(operation, "mod") == 0) {
+        string_result = parse_primary(lexer, list);
+    }
+    else if(strcmp(operation, "and") == 0 || strcmp(operation, "or") == 0) {
+        string_result = parse_term(lexer, list);
+    }
+    if (strcmp(string_result, "Error!") == 0)
+    {
+        return -1;
+    }
+    else if (string_result[0] == '%')
+    {
+        if (*is_pointer == 1)
+        {
+            printf("%%%lld = %s i32 %s, %s\n", *global_counter, operation, pointer_name, string_result);
+            operation_helper(result, operation, list_get(list, string_result));
+            //*result += atoll(string_result);
+            sprintf(pointer_final, "%%%lld", *global_counter);
+            list_add(list, pointer_final, *result);
+            return 0;
+        }
+        else
+        {
+            printf("%%%lld = %s i32 %lld, %s\n", *global_counter, operation, *result, string_result);
+            operation_helper(result, operation, list_get(list, string_result));
+            //*result += list_get(list, string_result);
+            sprintf(pointer_final, "%%%lld", *global_counter);
+            list_add(list, pointer_final, *result);
+            return 1;
+        }
+    }
+    else
+    {
+        if (*is_pointer == 1)
+        {
+            printf("%%%lld = add i32 %s, %lld\n", *global_counter, pointer_name, atoll(string_result));
+            operation_helper(result, operation, atoll(string_result));
+            //*result += atoll(string_result);
+            sprintf(pointer_final, "%%%lld", *global_counter);
+            list_add(list, pointer_final, *result);
+            return 3;
+        }
+        else
+        {
+            printf("%%%lld = add i32 %lld, %lld\n", *global_counter, *result, atoll(string_result));
+            operation_helper(result, operation, atoll(string_result));
+            //*result += list_get(list, string_result);
+            sprintf(pointer_final, "%%%lld", *global_counter);
+            list_add(list, pointer_final, *result);
+            return 2;
+        }
+    }
+}
+
+void operation_helper(int* lhs, char* operation, int rhs) {
+    if(strcmp(operation, "add") == 0) {
+        *lhs += rhs;
+    }
+    else if(strcmp(operation, "sub") == 0) {
+        *lhs -= rhs;
+    }
+    else if(strcmp(operation, "mul") == 0) {
+        *lhs *= rhs;
+    }
+    else if(strcmp(operation, "and") == 0) {
+        *lhs &= rhs;
+    }
+    else if(strcmp(operation, "or") == 0) {
+        *lhs |= rhs;
+    }
+    else if(strcmp(operation, "div") == 0) {
+        *lhs /= rhs;
+    }
+    else if(strcmp(operation, "mod") == 0) {
+        *lhs %= rhs;
+    }
+}
+
+int global_counter = 1;
+
 int checkParanthese(char *input)
 {
     // Check the number of left and right parentheses
@@ -347,6 +334,8 @@ int checkValid(Token *token)
         token->type == TOKEN_PLUS ||
         token->type == TOKEN_MINUS ||
         token->type == TOKEN_MUL ||
+            token->type == TOKEN_DIV ||
+            token->type == TOKEN_MOD ||
         token->type == TOKEN_EOF ||
         token->type == TOKEN_COMMA ||
         token->type == TOKEN_RPAREN)
@@ -430,8 +419,8 @@ char *parse_expression(Lexer *lexer, List *list)
     char *string_result = parse_term(lexer, list);
     int is_pointer = 0;
     char *pointer_name = calloc(1, 256);
+    char *pointer_final = calloc(1, 256);
 
-    // Check if there is an error
     if (strcmp(string_result, "Error!") == 0)
     {
         return string_result;
@@ -465,7 +454,14 @@ char *parse_expression(Lexer *lexer, List *list)
         token = lexer_advance(lexer);
         if (token->type == TOKEN_AND)
         {
-            // Check if the next token is valid
+            int res = pointer_helper(&is_pointer, "and", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            if (res == -1)
+            {
+                return "Error!";
+            }
+            global_counter++;
+            is_pointer = 1;
+            /*// Check if the next token is valid
             if (checkValid(lexer_peek(lexer)) == 0)
             {
                 return "Error!";
@@ -481,11 +477,18 @@ char *parse_expression(Lexer *lexer, List *list)
             {
                 // If there is no error, bitwise and the result with the previous result
                 result &= atoll(string_result);
-            }
+            }*/
         }
         else if (token->type == TOKEN_OR) // Same as AND operator
         {
-            if (checkValid(lexer_peek(lexer)) == 0)
+            int res = pointer_helper(&is_pointer, "or", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            if (res == -1)
+            {
+                return "Error!";
+            }
+            global_counter++;
+            is_pointer = 1;
+            /*if (checkValid(lexer_peek(lexer)) == 0)
             {
                 return "Error!";
             }
@@ -497,7 +500,7 @@ char *parse_expression(Lexer *lexer, List *list)
             else
             {
                 result |= atoll(string_result);
-            }
+            }*/
         }
         else
         {
@@ -506,6 +509,10 @@ char *parse_expression(Lexer *lexer, List *list)
         token = lexer_peek(lexer);
     }
 
+    if (is_pointer == 1)
+    {
+        return pointer_final;
+    }
     // Convert the result to a string and return it
     char *result_string = calloc(1, 256);
     sprintf(result_string, "%lld", result);
@@ -553,7 +560,7 @@ char *parse_term(Lexer *lexer, List *list)
 
         if (token->type == TOKEN_PLUS)
         {
-            int res = main_helper(&is_pointer, "add", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            int res = pointer_helper(&is_pointer, "add", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
             if (res == -1)
             {
                 return "Error!";
@@ -563,7 +570,7 @@ char *parse_term(Lexer *lexer, List *list)
         }
         else if (token->type == TOKEN_MINUS)
         {
-            int res = main_helper(&is_pointer, "sub", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            int res = pointer_helper(&is_pointer, "sub", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
             if (res == -1)
             {
                 return "Error!";
@@ -604,7 +611,7 @@ char *parse_factor(Lexer *lexer, List *list)
     else if (string_result[0] == '%') // If pointer
     {
         Token *tmptoken = lexer_peek(lexer);
-        if (tmptoken->type == TOKEN_MUL)
+        if (tmptoken->type == TOKEN_MUL || tmptoken->type == TOKEN_DIV || tmptoken->type == TOKEN_MOD)
         {
             sprintf(pointer_name, "%s", string_result);
             result = list_get(list, pointer_name);
@@ -623,13 +630,33 @@ char *parse_factor(Lexer *lexer, List *list)
 
     Token *token = lexer_peek(lexer);
 
-    while (token->type == TOKEN_MUL)
+    while (token->type == TOKEN_MUL || token->type == TOKEN_DIV || token->type == TOKEN_MOD)
     {
         token = lexer_advance(lexer);
 
         if (token->type == TOKEN_MUL)
         {
-            int res = main_helper(&is_pointer, "mul", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            int res = pointer_helper(&is_pointer, "mul", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            if (res == -1)
+            {
+                return "Error!";
+            }
+            global_counter++;
+            is_pointer = 1;
+        }
+        else if (token->type == TOKEN_DIV)
+        {
+            int res = pointer_helper(&is_pointer, "div", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
+            if (res == -1)
+            {
+                return "Error!";
+            }
+            global_counter++;
+            is_pointer = 1;
+        }
+        else if (token->type == TOKEN_MOD)
+        {
+            int res = pointer_helper(&is_pointer, "mod", pointer_final, string_result, &result, list, &global_counter, lexer, pointer_name);
             if (res == -1)
             {
                 return "Error!";
@@ -709,6 +736,15 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
+            if (string_result[0] == '%') {
+                result = list_get(list, string_result);
+                sprintf(lhs, "%s", string_result);
+                is_lhs_pointer = 1;
+            }
+            else {
+                result = atoll(string_result);
+                sprintf(lhs, "%s", string_result);
+            }
             result = ~atoll(string_result);
         }
         token = lexer_advance(lexer);
@@ -727,6 +763,8 @@ char *parse_primary(Lexer *lexer, List *list)
             return "Error!";
         }
         int result2 = 0;
+        char* lhs = calloc(256, sizeof(char));
+        int is_lhs_pointer = 0;
         string_result = parse_expression(lexer, list);
         if (strcmp(string_result, "Error!") == 0)
         {
@@ -734,7 +772,15 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
-            result2 = atoll(string_result);
+            if (string_result[0] == '%') {
+                result2 = list_get(list, string_result);
+                sprintf(lhs, "%s", string_result);
+                is_lhs_pointer = 1;
+            }
+            else {
+                result2 = atoll(string_result);
+                sprintf(lhs, "%s", string_result);
+            }
         }
         token = lexer_advance(lexer);
         if (token->type != TOKEN_COMMA)
@@ -742,6 +788,8 @@ char *parse_primary(Lexer *lexer, List *list)
             return "Error!";
         }
         int result3 = 0;
+        char* rhs = calloc(256, sizeof(char));
+        int is_rhs_pointer = 0;
         string_result = parse_expression(lexer, list);
         if (strcmp(string_result, "Error!") == 0)
         {
@@ -749,7 +797,15 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else
         {
-            result3 = atoll(string_result);
+            if (string_result[0] == '%') {
+                result3 = list_get(list, string_result);
+                sprintf(rhs, "%s", string_result);
+                is_rhs_pointer = 1;
+            }
+            else {
+                result3 = atoll(string_result);
+                sprintf(rhs, "%s", string_result);
+            }
         }
         token = lexer_advance(lexer);
         if (token->type != TOKEN_RPAREN)
@@ -759,23 +815,58 @@ char *parse_primary(Lexer *lexer, List *list)
         // Do the operation based on the function
         if (ttype == TOKEN_XOR)
         {
+            char* pointer_final = calloc(256, sizeof(char));
+            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
+            sprintf(pointer_final, "%%%lld", global_counter);
+
             result = result2 ^ result3;
+            list_add(list, pointer_final, result);
+            global_counter++;
+            return pointer_final;
         }
         else if (ttype == TOKEN_RR)
         {
+            char* pointer_final = calloc(256, sizeof(char));
+            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
+            sprintf(pointer_final, "%%%lld", global_counter);
+
             result = result2 >> result3;
+            list_add(list, pointer_final, result);
+            global_counter++;
+            return pointer_final;
         }
         else if (ttype == TOKEN_RS)
         {
+            char* pointer_final = calloc(256, sizeof(char));
+            printf("%%%lld = ashr i32 %s, %s\n", global_counter, lhs, rhs);
+            sprintf(pointer_final, "%%%lld", global_counter);
+
             result = result2 >> result3;
+            list_add(list, pointer_final, result);
+            global_counter++;
+            return pointer_final;
         }
         else if (ttype == TOKEN_LR)
         {
+            char* pointer_final = calloc(256, sizeof(char));
+            printf("%%%lld = xor i32 %s, %s\n", global_counter, lhs, rhs);
+            sprintf(pointer_final, "%%%lld", global_counter);
+
             result = result2 << result3;
+            list_add(list, pointer_final, result);
+            global_counter++;
+            return pointer_final;
         }
         else if (ttype == TOKEN_LS)
         {
+            char* pointer_final = calloc(256, sizeof(char));
+            printf("%%%lld = shl i32 %s, %s\n", global_counter, lhs, rhs);
+            sprintf(pointer_final, "%%%lld", global_counter);
+
             result = result2 << result3;
+            list_add(list, pointer_final, result);
+            global_counter++;
+            return pointer_final;
         }
     }
 
@@ -785,6 +876,8 @@ char *parse_primary(Lexer *lexer, List *list)
           lexer_peek(lexer)->type == TOKEN_PLUS ||
           lexer_peek(lexer)->type == TOKEN_MINUS ||
           lexer_peek(lexer)->type == TOKEN_MUL ||
+            lexer_peek(lexer)->type == TOKEN_DIV ||
+            lexer_peek(lexer)->type == TOKEN_MOD ||
           lexer_peek(lexer)->type == TOKEN_EOF ||
           lexer_peek(lexer)->type == TOKEN_COMMA ||
           lexer_peek(lexer)->type == TOKEN_RPAREN))
@@ -910,7 +1003,7 @@ Token *lexer_advance(Lexer *lexer)
 
     // check for EOF
     // if there is a comment character('%'), set the token type to TOKEN_EOF so that the parser will stop
-    if (lexer->ch == '\0' || lexer->ch == '\n' || lexer->ch == '%')
+    if (lexer->ch == '\0' || lexer->ch == '\n' || lexer->ch == '\r')
     {
         token->type = TOKEN_EOF;
     }
@@ -956,6 +1049,12 @@ Token *lexer_advance(Lexer *lexer)
                 break;
             case '=':
                 token->type = TOKEN_EQUALS;
+                break;
+            case '/':
+                token->type = TOKEN_DIV;
+                break;
+            case '%':
+                token->type = TOKEN_MOD;
                 break;
             default:
                 token->type = TOKEN_UNKNOWN;
