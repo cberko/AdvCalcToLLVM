@@ -890,27 +890,14 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else if (ttype == TOKEN_RR)
         {
-            // a b right shift or a leftshit 64-b
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, lhs);
-            int lhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, rhs);
-            int rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = ashr i32 %%%d, %%%d\n", global_counter, lhs_pos, rhs_pos);
+            fprintf(fout, "%%%d = ashr i32 %s, %s\n", global_counter, lhs, rhs);
             int fin_lhs_pos = global_counter;
             global_counter++;
 
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, lhs);
-            lhs_pos = global_counter;
+            fprintf(fout, "%%%d = sub i32 32, %s\n", global_counter, rhs);
+            int rhs_pos = global_counter;
             global_counter++;
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, rhs);
-            rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = sub i32 32, %%%d\n", global_counter, rhs_pos);
-            rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = shl i32 %%%d, %%%d\n", global_counter, lhs_pos, rhs_pos);
+            fprintf(fout, "%%%d = shl i32 %s, %%%d\n", global_counter, lhs, rhs_pos);
             int fin_rhs_pos = global_counter;
             global_counter++;
 
@@ -931,27 +918,15 @@ char *parse_primary(Lexer *lexer, List *list)
         }
         else if (ttype == TOKEN_LR)
         {
-            // a b right shift or a leftshit 64-b
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, lhs);
-            int lhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, rhs);
-            int rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = shl i32 %%%d, %%%d\n", global_counter, lhs_pos, rhs_pos);
+            // a b right shift or a leftshit 32-b
+            fprintf(fout, "%%%d = shl i32 %s, %s\n", global_counter, lhs, rhs);
             int fin_lhs_pos = global_counter;
             global_counter++;
 
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, lhs);
-            lhs_pos = global_counter;
+            fprintf(fout, "%%%d = sub i32 32, %s\n", global_counter, rhs);
+            int rhs_pos = global_counter;
             global_counter++;
-            fprintf(fout, "%%%d = load i32, i32* %s\n", global_counter, rhs);
-            rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = sub i32 32, %%%d\n", global_counter, rhs_pos);
-            rhs_pos = global_counter;
-            global_counter++;
-            fprintf(fout, "%%%d = ashr i32 %%%d, %%%d\n", global_counter, lhs_pos, rhs_pos);
+            fprintf(fout, "%%%d = ashr i32 %s, %%%d\n", global_counter, lhs, rhs_pos);
             int fin_rhs_pos = global_counter;
             global_counter++;
 

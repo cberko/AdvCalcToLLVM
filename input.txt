@@ -1,5 +1,15 @@
-siu = 11
-siuuu = 7
-siu / siuuu
-siu = siu * siuuu
-siu - siu + siu * siu / siu
+a = 2
+a = 6
+a = 2
+b = 3
+c = a+b
+c= a+b
+a
+b
+c
+xor(a,b)
+not(a)
+rr(a,1)
+lr(a,1)
+a = 2+3 | 3 + 4
+a
