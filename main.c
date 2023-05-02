@@ -267,7 +267,7 @@ int main(int argc, char **argv)
     if (error_flag == 1)
     {
         // if there is an error, delete the output file
-        freopen("../output.txt", "w", fout);
+        remove(argv[2]);
     }
 
     fclose(fout);
